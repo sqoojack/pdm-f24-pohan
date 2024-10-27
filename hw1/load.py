@@ -4,10 +4,6 @@ import numpy as np
 import habitat_sim
 from habitat_sim.utils.common import d3_40_colors_rgb
 import cv2
-import os
-import sys
-import argparse
-import shutil
 
 
 # This is the scene we are going to load.
@@ -24,13 +20,10 @@ sim_settings = {
     "sensor_pitch": 0,  # sensor pitch (x rotation in rads)
 }
 
-cam_extr = []
-
 # This function generates a config for the simulator.
 # It contains two parts:
 # one for the simulator backend
 # one for the agent, where you can attach a bunch of sensors
-
 
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
@@ -98,45 +91,17 @@ def make_simple_cfg(settings):
 
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
-def navigateAndSee(action="", data_root='data_collection/second_floor/'):
-    global count
-    observations = sim.step(action)
-    #print("action: ", action)
-
-    cv2.imshow("RGB", transform_rgb_bgr(observations["color_sensor"]))
-    cv2.imshow("depth", transform_depth(observations["depth_sensor"]))
-    cv2.imshow("semantic", transform_semantic(observations["semantic_sensor"]))
-    agent_state = agent.get_state()
-    sensor_state = agent_state.sensor_states['color_sensor']
-    print("Frame:", count)
-    print("camera pose: x y z rw rx ry rz")
-    print(sensor_state.position[0],sensor_state.position[1],sensor_state.position[2], sensor_state.rotation.w, sensor_state.rotation.x, sensor_state.rotation.y, sensor_state.rotation.z)
-    
-    count += 1
-    cv2.imwrite(data_root + f"rgb/{count}.png", transform_rgb_bgr(observations["color_sensor"]))
-    cv2.imwrite(data_root + f"depth/{count}.png", transform_depth(observations["depth_sensor"]))
-    cv2.imwrite(data_root + f"semantic/{count}.png", transform_semantic(observations["semantic_sensor"]))
-    
-    cam_extr.append([sensor_state.position[0], sensor_state.position[1], sensor_state.position[2], 
-                    sensor_state.rotation.w, sensor_state.rotation.x, sensor_state.rotation.y, sensor_state.rotation.z])
-    
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--floor', type=int, default=1)  
-args = parser.parse_args()
 
 cfg = make_simple_cfg(sim_settings)
 sim = habitat_sim.Simulator(cfg)
+
 
 # initialize an agent
 agent = sim.initialize_agent(sim_settings["default_agent"])
 
 # Set agent state
 agent_state = habitat_sim.AgentState()
-if args.floor == 1:
-    agent_state.position = np.array([0.0, 0.0, 0.0])  # agent in world space
-elif args.floor == 2:
-    agent_state.position = np.array([0.0, 1.0, -1.0])  # agent in world space
+agent_state.position = np.array([0.0, 0.0, 0.0])  # agent in world space
 agent.set_state(agent_state)
 
 # obtain the default, discrete actions that an agent can perform
@@ -158,34 +123,36 @@ print(" f for finish and quit the program")
 print("#############################")
 
 
-if args.floor == 1:
-    data_root = "data_collection/first_floor/"
-elif args.floor == 2:
-    data_root = "data_collection/second_floor/"
+def navigateAndSee(action=""):
+    if action in action_names:
+        observations = sim.step(action)
+        #print("action: ", action)
 
-if os.path.isdir(data_root): 
-    shutil.rmtree(data_root)  # WARNING: this line will delete whole directory with files
+        cv2.imshow("RGB", transform_rgb_bgr(observations["color_sensor"]))
+        cv2.imshow("depth", transform_depth(observations["depth_sensor"]))
+        cv2.imshow("semantic", transform_semantic(observations["semantic_sensor"]))
+        agent_state = agent.get_state()
+        sensor_state = agent_state.sensor_states['color_sensor']
+        print("camera pose: x y z rw rx ry rz")
+        print(sensor_state.position[0],sensor_state.position[1],sensor_state.position[2],  sensor_state.rotation.w, sensor_state.rotation.x, sensor_state.rotation.y, sensor_state.rotation.z)
 
-for sub_dir in ['rgb/', 'depth/', 'semantic/']:
-    os.makedirs(data_root + sub_dir)
 
-count = 0
 action = "move_forward"
+navigateAndSee(action)
 
-navigateAndSee(action, data_root)
 while True:
     keystroke = cv2.waitKey(0)
     if keystroke == ord(FORWARD_KEY):
         action = "move_forward"
-        navigateAndSee(action, data_root)
+        navigateAndSee(action)
         print("action: FORWARD")
     elif keystroke == ord(LEFT_KEY):
         action = "turn_left"
-        navigateAndSee(action, data_root)
+        navigateAndSee(action)
         print("action: LEFT")
     elif keystroke == ord(RIGHT_KEY):
         action = "turn_right"
-        navigateAndSee(action, data_root)
+        navigateAndSee(action)
         print("action: RIGHT")
     elif keystroke == ord(FINISH):
         print("action: FINISH")
@@ -193,5 +160,3 @@ while True:
     else:
         print("INVALID KEY")
         continue
-
-np.save(data_root + 'GT_pose.npy', np.asarray(cam_extr))
