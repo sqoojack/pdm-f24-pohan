@@ -1,8 +1,27 @@
-# pdm-f24-hw1
+---
+title: Command Line
 
-NYCU Perception and Decision Making 2024 Fall
+---
 
-Spec: [Google Docs](https://docs.google.com/document/d/1QSbSWJ7s78h9QRS4EC3gsECFF8JDg0IT/edit?usp=sharing&ouid=101044242612677438105&rtpof=true&sd=true)
 
-## Preparation
-The replica dataset, you can use the same one in `hw0`.
+**Command Line:**
+
+Task1:
+python3 bev.py --photo 1
+python3 bev.py --photo 2
+
+
+Task2:
+
+要先執行:
+python3 load.py -f 1
+python3 load.py -f 2
+來製造depth圖像以及rgb圖像
+存在data_collection/first_floor
+跟data_collection/second_floor 資料夾中
+
+再來執行 reconstruct.py
+python3 reconstruct.py -f 1 -v open3d
+python3 reconstruct.py -f 2 -v open3d
+python3 reconstruct.py -f 1 -v my_icp
+python3 reconstruct.py -f 2 -v my_icp
